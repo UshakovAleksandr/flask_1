@@ -7,10 +7,6 @@ import api.models.user
 import api.views.user
 
 
-
-
-
-
 @app.route("/alive", methods=["GET", ])
 def alive():
     if request.method == "GET":

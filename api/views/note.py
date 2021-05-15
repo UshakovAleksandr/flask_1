@@ -1,5 +1,5 @@
-from flask import request, jsonify, g
-from api import app, auth
+from flask import request, jsonify
+from api import app, auth, g
 from api.models.note import Note
 from api.models.user import User
 from flask.views import MethodView
@@ -22,8 +22,12 @@ class NoteView(MethodView):
             return {f"error": f"Notes by user {user_id} not found"}, 404
         return jsonify([note.to_dict() for note in notes])
 
+    @auth.login_required()
     def post(self, user_id):
+
         user = User.query.get(user_id)
+        if user != g.user:
+            return {f"error": f"Login or password is incorrect"}, 403
         note = Note(user_id=user.id, **request.json)
         try:
             note.save()
@@ -34,19 +38,20 @@ class NoteView(MethodView):
 
 class NoteUserView(MethodView):
 
-    @auth.login_required()
     def get(self, user_id, note_id):
-        note = Note.query.filter(Note.user_id == user_id, Note.id == note_id).all()
-
+        note = Note.query.filter(Note.user_id == user_id, Note.id == note_id).first()
         if not note:
             return {f"error": f"Notes with id {note_id} by user {user_id} not found"}, 404
-        return jsonify(note[0].to_dict())
+        return jsonify(note.to_dict())
 
+    @auth.login_required()
     def put(self, user_id, note_id):
-        note = Note.query.filter(Note.user_id == user_id, Note.id == note_id).all()
+        user = g.user
+        note = Note.query.filter(Note.user_id == user_id, Note.id == note_id).first()
         if not note:
             return {f"error": f"Notes with id {note_id} by user {user_id} not found"}, 404
-        note = note[0]
+        if note.user != user:
+            return {f"error": f"Access denied to note with id={note_id}"}, 403
         for key in request.json:
             setattr(note, key, request.json[key])
         try:
@@ -55,11 +60,15 @@ class NoteUserView(MethodView):
         except:
             return jsonify({"error": f"All note params must be unique"}), 404
 
+    @auth.login_required()
     def delete(self, user_id, note_id):
-        note = Note.query.filter(Note.user_id == user_id, Note.id == note_id).all()
+        user = g.user
+        note = Note.query.filter(Note.user_id == user_id, Note.id == note_id).first()
         if not note:
             return {f"error": f"Notes with id {note_id} by user {user_id} not found"}, 404
-        note[0].delete()
+        if note.user != user:
+            return {f"error": f"Access denied to note with id={note_id}"}, 403
+        note.delete()
         return jsonify({f"Note with id {note_id}": "deleted"}), 200
 
 
