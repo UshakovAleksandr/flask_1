@@ -2,6 +2,8 @@ from flask import request, jsonify
 from api import app
 from flask.views import MethodView
 from api.models.user import User
+from validation.validator import validate
+from validation.schemas.user_schema import USER_CREATE
 
 
 class UserView(MethodView):
@@ -40,6 +42,7 @@ class UserAllView(MethodView):
             return {f"error": "Users not found"}, 404
         return jsonify([user.to_dict() for user in users])
 
+    @validate("json", USER_CREATE)
     def post(self):
         user = User(**request.json)
         user.set_password(request.json["password"])

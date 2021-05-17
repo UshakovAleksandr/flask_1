@@ -24,10 +24,7 @@ class NoteView(MethodView):
 
     @auth.login_required()
     def post(self, user_id):
-
         user = User.query.get(user_id)
-        if user != g.user:
-            return {f"error": f"Login or password is incorrect"}, 403
         note = Note(user_id=user.id, **request.json)
         try:
             note.save()
